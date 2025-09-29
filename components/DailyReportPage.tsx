@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { ProblemReport, Site } from '../types';
+import type { ProblemReport } from '../types';
 import { EditIcon, DeleteIcon, ExportIcon, ImportIcon } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -8,10 +8,9 @@ declare const XLSX: any;
 interface DailyReportPageProps {
     reports: ProblemReport[];
     setReports: React.Dispatch<React.SetStateAction<ProblemReport[]>>;
-    sites: Site[];
 }
 
-const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, sites }) => {
+const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }) => {
     const getToday = () => new Date().toISOString().split('T')[0];
     const importInputRef = useRef<HTMLInputElement>(null);
 
