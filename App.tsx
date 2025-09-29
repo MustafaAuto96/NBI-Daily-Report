@@ -1,14 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import type { Site, ProblemReport } from './types';
-import { DUMMY_SITES, DUMMY_REPORTS } from './constants';
+import type { ProblemReport } from './types';
 import Header from './components/Header';
 import DailyReportPage from './components/DailyReportPage';
 
 const App: React.FC = () => {
     
     // --- Data State ---
-    const [sites] = useState<Site[]>(DUMMY_SITES);
-    const [reports, setReports] = useState<ProblemReport[]>(DUMMY_REPORTS);
+    const [reports, setReports] = useState<ProblemReport[]>(() => {
+        try {
+            const savedReports = localStorage.getItem('dailyReports');
+            return savedReports ? JSON.parse(savedReports) : [];
+        } catch (error) {
+            console.error("Error reading reports from localStorage:", error);
+            return [];
+        }
+    });
+
+    // Save reports to localStorage whenever they change
+    useEffect(() => {
+        try {
+            localStorage.setItem('dailyReports', JSON.stringify(reports));
+        } catch (error) {
+            console.error("Error saving reports to localStorage:", error);
+        }
+    }, [reports]);
     
     // --- UI State ---
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -44,7 +59,7 @@ const App: React.FC = () => {
                 toggleTheme={toggleTheme}
             />
             <main className="container mx-auto p-4 md:p-6 lg:p-8">
-                <DailyReportPage reports={reports} setReports={setReports} sites={sites} />
+                <DailyReportPage reports={reports} setReports={setReports} />
             </main>
         </div>
     );
