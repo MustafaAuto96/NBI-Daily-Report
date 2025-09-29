@@ -153,8 +153,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                 }).filter((r): r is ProblemReport => r !== null && !!r.siteName && !!r.ticketId);
                 
                 if (newReports.length > 0) {
-                    setReports(prev => [...prev, ...newReports]);
-                    alert(`${newReports.length} reports imported successfully!`);
+                    setReports(newReports);
+                    alert(`${newReports.length} reports successfully replaced the existing data!`);
                 } else if (jsonRows.length > 0) {
                     alert('No valid reports found in the file. Please check the data format.');
                 }
