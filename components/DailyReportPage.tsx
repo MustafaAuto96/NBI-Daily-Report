@@ -11,8 +11,31 @@ interface DailyReportPageProps {
     sites: Site[];
 }
 
+const toDisplayDate = (isoDate: string): string => {
+    if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate;
+    const [year, month, day] = isoDate.split('-');
+    return `${day}/${month}/${year}`;
+};
+
+const toIsoDate = (displayDate: string): string => {
+    if (!displayDate) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(displayDate)) return displayDate; 
+    
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(displayDate)) return displayDate; 
+    
+    const [day, month, year] = displayDate.split('/');
+    const date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+    
+    if (isNaN(date.getTime()) || date.getUTCFullYear() !== parseInt(year, 10) || date.getUTCMonth() + 1 !== parseInt(month, 10) || date.getUTCDate() !== parseInt(day, 10)) {
+        return displayDate; // Invalid date, return as is for user to see mistake
+    }
+
+    return `${year}-${month}-${day}`;
+};
+
+
 const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, sites }) => {
-    const getToday = () => new Date().toISOString().split('T')[0];
+    const getTodayISO = () => new Date().toISOString().split('T')[0];
     const importInputRef = useRef<HTMLInputElement>(null);
 
     const initialFormState = {
@@ -21,8 +44,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
         status: 'UP' as 'UP' | 'DOWN',
         reason: '',
         lastUpdate: '',
-        issueDate: getToday(),
-        lastFollowUp: getToday(),
+        issueDate: toDisplayDate(getTodayISO()),
+        lastFollowUp: toDisplayDate(getTodayISO()),
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -37,18 +60,34 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        const dataToSave = {
+            ...formData,
+            issueDate: toIsoDate(formData.issueDate),
+            lastFollowUp: toIsoDate(formData.lastFollowUp),
+        };
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.issueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.lastFollowUp)) {
+            alert('Please enter valid dates in dd/mm/yyyy format.');
+            return;
+        }
+
         if (editingReportId) {
-            setReports(prev => prev.map(r => r.id === editingReportId ? { ...r, ...formData, id: editingReportId } : r));
+            setReports(prev => prev.map(r => r.id === editingReportId ? { ...dataToSave, id: editingReportId } : r));
             setEditingReportId(null);
         } else {
-            setReports(prev => [...prev, { ...formData, id: Date.now().toString() }]);
+            setReports(prev => [...prev, { ...dataToSave, id: Date.now().toString() }]);
         }
         setFormData(initialFormState);
     };
     
     const handleEdit = (report: ProblemReport) => {
         setEditingReportId(report.id);
-        setFormData(report);
+        setFormData({
+            ...report,
+            issueDate: toDisplayDate(report.issueDate),
+            lastFollowUp: toDisplayDate(report.lastFollowUp),
+        });
     }
 
     const handleDeleteClick = (report: ProblemReport) => {
@@ -77,21 +116,12 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
     const exportToCSV = () => {
         const headers = ['Site Name', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
         
-        const formatDateForExport = (dateString: string): string => {
-            if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-                return dateString;
-            }
-            const [year, month, day] = dateString.split('-');
-            return `${day}/${month}/${year}`;
-        };
-
         const rows = reports.map(report => 
-            [report.siteName, report.ticketId, report.status, `"${report.reason.replace(/"/g, '""')}"`, `"${report.lastUpdate.replace(/"/g, '""')}"`, formatDateForExport(report.issueDate), formatDateForExport(report.lastFollowUp)].join(',')
+            [report.siteName, report.ticketId, report.status, `"${report.reason.replace(/"/g, '""')}"`, `"${report.lastUpdate.replace(/"/g, '""')}"`, toDisplayDate(report.issueDate), toDisplayDate(report.lastFollowUp)].join(',')
         );
         
         const csvString = [headers.join(','), ...rows].join('\n');
         
-        // Add UTF-8 BOM for Excel compatibility and use Blob for robust file creation
         const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         
@@ -101,7 +131,6 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
         document.body.appendChild(link);
         link.click();
         
-        // Clean up
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
@@ -147,7 +176,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                     }
 
                     const formatDate = (date: any): string => {
-                        if (!date) return getToday();
+                        if (!date) return getTodayISO();
                         if (date instanceof Date) {
                            return date.toISOString().split('T')[0];
                         }
@@ -232,11 +261,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
-                                <input type="date" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" placeholder="dd/mm/yyyy" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div>
                                 <label htmlFor="lastFollowUp" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Follow Up</label>
-                                <input type="date" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" placeholder="dd/mm/yyyy" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
 
                             <div className="lg:col-span-3 flex justify-end space-x-4">
@@ -283,8 +312,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300 max-w-xs truncate" title={report.reason}>{report.reason}</td>
                                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300 max-w-xs truncate" title={report.lastUpdate}>{report.lastUpdate}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{report.issueDate}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{report.lastFollowUp}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{toDisplayDate(report.issueDate)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{toDisplayDate(report.lastFollowUp)}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             {canManageReports && (
                                                 <div className="flex items-center space-x-4">
