@@ -52,6 +52,9 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
     const [editingReportId, setEditingReportId] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [reportToDelete, setReportToDelete] = useState<ProblemReport | null>(null);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importedReports, setImportedReports] = useState<ProblemReport[] | null>(null);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -200,21 +203,38 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                 }).filter((r): r is ProblemReport => r !== null && !!r.siteName && !!r.ticketId);
                 
                 if (newReports.length > 0) {
-                    setReports(prev => [...prev, ...newReports]);
-                    alert(`${newReports.length} reports imported successfully!`);
+                    setImportedReports(newReports);
+                    setIsImportModalOpen(true);
                 } else if (jsonRows.length > 0) {
                     alert('No valid reports found in the file. Please check the data format.');
+                } else {
+                    alert('The imported file contains no data rows.');
                 }
 
             } catch (error) {
                 console.error("Error importing file:", error);
                 alert("There was an error processing the file.");
-            } finally {
-                if (e.target) e.target.value = '';
             }
         };
         reader.readAsBinaryString(file);
     };
+    
+    const confirmImport = () => {
+        if (importedReports) {
+            setReports(importedReports);
+            alert(`${importedReports.length} reports imported successfully!`);
+        }
+        closeImportModal();
+    };
+
+    const closeImportModal = () => {
+        setIsImportModalOpen(false);
+        setImportedReports(null);
+        if (importInputRef.current) {
+            importInputRef.current.value = '';
+        }
+    };
+
 
     const canManageReports = true;
 
@@ -230,6 +250,15 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                         Are you sure you want to delete the report for site "<strong>{reportToDelete?.siteName}</strong>" with ticket ID "<strong>{reportToDelete?.ticketId}</strong>"?
                     </>
                 }
+            />
+             <ConfirmationModal
+                isOpen={isImportModalOpen}
+                onClose={closeImportModal}
+                onConfirm={confirmImport}
+                title="Confirm Data Import"
+                message="Importing this file will replace all existing reports. Are you sure you want to continue?"
+                confirmButtonText="Import and Replace"
+                confirmButtonClass="bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
             />
             <div className="space-y-8">
                 {canManageReports && (
