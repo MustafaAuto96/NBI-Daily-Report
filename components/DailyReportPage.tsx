@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { ProblemReport, Site } from '../types';
+import type { ProblemReport } from '../types';
 import { EditIcon, DeleteIcon, ExportIcon, ImportIcon } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -8,7 +8,6 @@ declare const XLSX: any;
 interface DailyReportPageProps {
     reports: ProblemReport[];
     setReports: React.Dispatch<React.SetStateAction<ProblemReport[]>>;
-    sites: Site[];
 }
 
 const toDisplayDate = (isoDate: string): string => {
@@ -56,9 +55,10 @@ const toIsoDate = (displayDate: string): string => {
 };
 
 
-const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, sites }) => {
+const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }) => {
     const getTodayISO = () => new Date().toISOString().split('T')[0];
     const importInputRef = useRef<HTMLInputElement>(null);
+    const formRef = useRef<HTMLDivElement>(null);
 
     const initialFormState = {
         siteName: '',
@@ -113,6 +113,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
             issueDate: toDisplayDate(report.issueDate),
             lastFollowUp: toDisplayDate(report.lastFollowUp),
         });
+        formRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
 
     const handleDeleteClick = (report: ProblemReport) => {
@@ -284,7 +285,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
             />
             <div className="space-y-8">
                 {canManageReports && (
-                    <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6">
+                    <div ref={formRef} className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6">
                         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">{editingReportId ? 'Edit Report' : 'Add New Problem Report'}</h1>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div className="lg:col-span-1">
@@ -304,11 +305,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                             </div>
                             <div className="md:col-span-2 lg:col-span-3">
                                 <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Reason</label>
-                                <input name="reason" id="reason" value={formData.reason} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <textarea name="reason" id="reason" value={formData.reason} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"></textarea>
                             </div>
                             <div className="md:col-span-2 lg:col-span-3">
                                 <label htmlFor="lastUpdate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Update</label>
-                                <input name="lastUpdate" id="lastUpdate" value={formData.lastUpdate} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <textarea name="lastUpdate" id="lastUpdate" value={formData.lastUpdate} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"></textarea>
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
