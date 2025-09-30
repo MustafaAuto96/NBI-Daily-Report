@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { ProblemReport } from '../types';
+import type { ProblemReport, Site } from '../types';
 import { EditIcon, DeleteIcon, ExportIcon, ImportIcon } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -8,9 +8,10 @@ declare const XLSX: any;
 interface DailyReportPageProps {
     reports: ProblemReport[];
     setReports: React.Dispatch<React.SetStateAction<ProblemReport[]>>;
+    sites: Site[];
 }
 
-const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }) => {
+const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, sites }) => {
     const getToday = () => new Date().toISOString().split('T')[0];
     const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,17 +76,34 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
 
     const exportToCSV = () => {
         const headers = ['Site Name', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
+        
+        const formatDateForExport = (dateString: string): string => {
+            if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                return dateString;
+            }
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        };
+
         const rows = reports.map(report => 
-            [report.siteName, report.ticketId, report.status, `"${report.reason.replace(/"/g, '""')}"`, `"${report.lastUpdate.replace(/"/g, '""')}"`, report.issueDate, report.lastFollowUp].join(',')
+            [report.siteName, report.ticketId, report.status, `"${report.reason.replace(/"/g, '""')}"`, `"${report.lastUpdate.replace(/"/g, '""')}"`, formatDateForExport(report.issueDate), formatDateForExport(report.lastFollowUp)].join(',')
         );
-        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
-        const encodedUri = encodeURI(csvContent);
+        
+        const csvString = [headers.join(','), ...rows].join('\n');
+        
+        // Add UTF-8 BOM for Excel compatibility and use Blob for robust file creation
+        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
+        
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
         link.setAttribute("download", "daily_problem_report.csv");
         document.body.appendChild(link);
         link.click();
+        
+        // Clean up
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const handleImportClick = () => {
@@ -153,8 +171,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                 }).filter((r): r is ProblemReport => r !== null && !!r.siteName && !!r.ticketId);
                 
                 if (newReports.length > 0) {
-                    setReports(newReports);
-                    alert(`${newReports.length} reports successfully replaced the existing data!`);
+                    setReports(prev => [...prev, ...newReports]);
+                    alert(`${newReports.length} reports imported successfully!`);
                 } else if (jsonRows.length > 0) {
                     alert('No valid reports found in the file. Please check the data format.');
                 }
