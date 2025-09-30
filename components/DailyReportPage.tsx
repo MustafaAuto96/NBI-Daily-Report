@@ -304,11 +304,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports, 
                             </div>
                             <div className="md:col-span-2 lg:col-span-3">
                                 <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Reason</label>
-                                <textarea name="reason" id="reason" value={formData.reason} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"></textarea>
+                                <input name="reason" id="reason" value={formData.reason} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div className="md:col-span-2 lg:col-span-3">
                                 <label htmlFor="lastUpdate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Update</label>
-                                <textarea name="lastUpdate" id="lastUpdate" value={formData.lastUpdate} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"></textarea>
+                                <input name="lastUpdate" id="lastUpdate" value={formData.lastUpdate} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
