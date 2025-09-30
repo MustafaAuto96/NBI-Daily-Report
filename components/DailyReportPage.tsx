@@ -12,25 +12,47 @@ interface DailyReportPageProps {
 }
 
 const toDisplayDate = (isoDate: string): string => {
-    if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate;
-    const [year, month, day] = isoDate.split('-');
-    return `${day}/${month}/${year}`;
+    if (!isoDate) return isoDate;
+    // Handles yyyy-mm-dd and yyyy-m-d
+    const parts = isoDate.split('-');
+    if (parts.length === 3 && parts[0].length === 4) { 
+        const [year, month, day] = parts;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    }
+    return isoDate; // Return as is if not in expected format
 };
 
 const toIsoDate = (displayDate: string): string => {
     if (!displayDate) return '';
+    // If it's already a valid ISO date, return it.
     if (/^\d{4}-\d{2}-\d{2}$/.test(displayDate)) return displayDate; 
     
-    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(displayDate)) return displayDate; 
+    // Allow for d/m/yyyy and dd/mm/yyyy formats using a regex match
+    const match = displayDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) {
+        return displayDate; // Return original string if it doesn't match for validation
+    }
     
-    const [day, month, year] = displayDate.split('/');
-    const date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+    const [, dayStr, monthStr, yearStr] = match;
     
-    if (isNaN(date.getTime()) || date.getUTCFullYear() !== parseInt(year, 10) || date.getUTCMonth() + 1 !== parseInt(month, 10) || date.getUTCDate() !== parseInt(day, 10)) {
-        return displayDate; // Invalid date, return as is for user to see mistake
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+
+    if (isNaN(day) || isNaN(month) || isNaN(year) || month < 1 || month > 12 || day < 1 || day > 31) {
+        return displayDate; // Invalid numbers, return for validation
     }
 
-    return `${year}-${month}-${day}`;
+    // Create date in UTC to avoid timezone issues and to validate the date itself
+    const date = new Date(Date.UTC(year, month - 1, day));
+    
+    // Check if Date object created a valid date that matches the input
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+        return displayDate; // Invalid date (e.g., Feb 30th), return for validation
+    }
+
+    // Return correctly padded ISO 8601 format (yyyy-mm-dd)
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 
 
