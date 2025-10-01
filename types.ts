@@ -22,7 +22,7 @@ export interface Site {
 
 export interface ProblemReport {
     id: string;
-    siteName: string;
+    siteLocation: string; // Renamed from siteName for consistency
     ticketId: string;
     status: 'UP' | 'DOWN';
     reason: string;
