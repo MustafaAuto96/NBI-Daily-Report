@@ -10,29 +10,39 @@ interface DailyReportPageProps {
     setReports: React.Dispatch<React.SetStateAction<ProblemReport[]>>;
 }
 
+/**
+ * Converts an ISO date string (yyyy-mm-dd) to a display format (m/d/yyyy).
+ * @param isoDate The date string in yyyy-mm-dd format.
+ * @returns The formatted date string, e.g., "6/12/2025".
+ */
 const toDisplayDate = (isoDate: string): string => {
     if (!isoDate) return isoDate;
     // Handles yyyy-mm-dd and yyyy-m-d
     const parts = isoDate.split('-');
     if (parts.length === 3 && parts[0].length === 4) { 
         const [year, month, day] = parts;
-        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+        return `${parseInt(month, 10)}/${parseInt(day, 10)}/${year}`;
     }
     return isoDate; // Return as is if not in expected format
 };
 
+/**
+ * Converts a display date string (m/d/yyyy) to an ISO date string (yyyy-mm-dd).
+ * @param displayDate The date string in m/d/yyyy or mm/dd/yyyy format.
+ * @returns The formatted date string in yyyy-mm-dd format.
+ */
 const toIsoDate = (displayDate: string): string => {
     if (!displayDate) return '';
     // If it's already a valid ISO date, return it.
     if (/^\d{4}-\d{2}-\d{2}$/.test(displayDate)) return displayDate; 
     
-    // Allow for d/m/yyyy and dd/mm/yyyy formats using a regex match
+    // Allow for m/d/yyyy and mm/dd/yyyy formats using a regex match
     const match = displayDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (!match) {
         return displayDate; // Return original string if it doesn't match for validation
     }
     
-    const [, dayStr, monthStr, yearStr] = match;
+    const [, monthStr, dayStr, yearStr] = match;
     
     const day = parseInt(dayStr, 10);
     const month = parseInt(monthStr, 10);
@@ -93,7 +103,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
         };
 
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.issueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.lastFollowUp)) {
-            alert('Please enter valid dates in dd/mm/yyyy format.');
+            alert('Please enter valid dates in mm/dd/yyyy format.');
             return;
         }
 
@@ -214,7 +224,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         }
 
                         // Handle string dates (expected from raw: false).
-                        // Our toIsoDate function correctly parses dd/mm/yyyy.
+                        // Our toIsoDate function correctly parses mm/dd/yyyy.
                         if (typeof date === 'string') {
                             const isoDate = toIsoDate(date.trim());
                             if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
@@ -334,11 +344,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
-                                <input type="text" placeholder="dd/mm/yyyy" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" placeholder="mm/dd/yyyy" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div>
                                 <label htmlFor="lastFollowUp" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Follow Up</label>
-                                <input type="text" placeholder="dd/mm/yyyy" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" placeholder="mm/dd/yyyy" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
 
                             <div className="lg:col-span-3 flex justify-end space-x-4">
