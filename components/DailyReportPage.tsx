@@ -173,7 +173,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
         reader.onload = (event) => {
             try {
                 const data = event.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                const workbook = XLSX.read(data, { type: 'binary', cellDates: false });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const headerRows: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -193,7 +193,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                     return;
                 }
 
-                const jsonRows: any[] = XLSX.utils.sheet_to_json(worksheet);
+                const jsonRows: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
                 const newReports: ProblemReport[] = jsonRows.map((row: any, index: number): ProblemReport | null => {
                     const status = row['Status']?.toUpperCase();
                     if (status !== 'UP' && status !== 'DOWN') {
@@ -203,15 +203,35 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
 
                     const formatDate = (date: any): string => {
                         if (!date) return getTodayISO();
-                        if (date instanceof Date) {
-                           return date.toISOString().split('T')[0];
+                        
+                        // Handle string dates first, as we set raw: false
+                        if (typeof date === 'string') {
+                            const isoDate = toIsoDate(date.trim());
+                            if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+                                return isoDate;
+                            }
                         }
+
+                        // Fallback for Excel serial numbers if they still appear
                         if (typeof date === 'number') {
                             const jsDate = new Date(Math.round((date - 25569) * 86400000));
-                            return jsDate.toISOString().split('T')[0];
+                            const year = jsDate.getUTCFullYear();
+                            const month = String(jsDate.getUTCMonth() + 1).padStart(2, '0');
+                            const day = String(jsDate.getUTCDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
                         }
-                        return String(date);
-                    }
+                        
+                        // Safeguard for Date objects
+                        if (date instanceof Date) { 
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
+                        }
+
+                        console.warn(`Could not parse date from imported file, row ${index + 2}:`, date);
+                        return getTodayISO();
+                    };
 
                     return {
                         id: `imported-${Date.now()}-${index}`,
@@ -305,11 +325,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             </div>
                             <div className="md:col-span-2 lg:col-span-3">
                                 <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Reason</label>
-                                <input name="reason" id="reason" value={formData.reason} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <textarea name="reason" id="reason" value={formData.reason} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"></textarea>
                             </div>
                             <div className="md:col-span-2 lg:col-span-3">
                                 <label htmlFor="lastUpdate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Update</label>
-                                <input name="lastUpdate" id="lastUpdate" value={formData.lastUpdate} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <textarea name="lastUpdate" id="lastUpdate" value={formData.lastUpdate} onChange={handleChange} rows={2} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"></textarea>
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
