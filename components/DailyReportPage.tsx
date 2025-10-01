@@ -11,9 +11,9 @@ interface DailyReportPageProps {
 }
 
 /**
- * Converts an ISO date string (yyyy-mm-dd) to a display format (mm/dd/yyyy).
+ * Converts an ISO date string (yyyy-mm-dd) to a display format (mm/dd/yy).
  * @param isoDate The date string in yyyy-mm-dd format.
- * @returns The formatted date string, e.g., "06/12/2025".
+ * @returns The formatted date string, e.g., "06/12/25".
  */
 const toDisplayDate = (isoDate: string): string => {
     if (!isoDate) return '';
@@ -21,33 +21,38 @@ const toDisplayDate = (isoDate: string): string => {
     const parts = isoDate.split('-');
     if (parts.length === 3 && parts[0].length === 4) {
         const [year, month, day] = parts;
-        return `${month}/${day}/${year}`;
+        return `${month}/${day}/${year.slice(-2)}`;
     }
     return isoDate; // Return as is if not in expected format
 };
 
 /**
- * Converts a display date string (m/d/yyyy) to an ISO date string (yyyy-mm-dd).
- * Used as a fallback for parsing string dates during import.
- * @param displayDate The date string in m/d/yyyy or mm/dd/yyyy format.
- * @returns The formatted date string in yyyy-mm-dd format.
+ * Converts a display date string (m/d/yy or m/d/yyyy) to an ISO date string (yyyy-mm-dd).
+ * Used for parsing string dates from form inputs and during import.
+ * @param displayDate The date string in various m/d/y formats.
+ * @returns The formatted date string in yyyy-mm-dd format, or the original string if invalid.
  */
 const toIsoDate = (displayDate: string): string => {
     if (!displayDate) return '';
     // If it's already a valid ISO date, return it.
     if (/^\d{4}-\d{2}-\d{2}$/.test(displayDate)) return displayDate; 
     
-    // Allow for m/d/yyyy and mm/dd/yyyy formats using a regex match
-    const match = displayDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    // Allow for m/d/yy, mm/dd/yy, m/d/yyyy, mm/dd/yyyy formats using a regex match
+    const match = displayDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
     if (!match) {
         return displayDate; // Return original string if it doesn't match for validation
     }
     
-    const [, monthStr, dayStr, yearStr] = match;
+    let [, monthStr, dayStr, yearStr] = match;
     
-    const day = parseInt(dayStr, 10);
+    let year = parseInt(yearStr, 10);
+    if (yearStr.length === 2) {
+        // Assume 21st century for 2-digit years. E.g., 25 becomes 2025.
+        year += 2000;
+    }
+
     const month = parseInt(monthStr, 10);
-    const year = parseInt(yearStr, 10);
+    const day = parseInt(dayStr, 10);
 
     if (isNaN(day) || isNaN(month) || isNaN(year) || month < 1 || month > 12 || day < 1 || day > 31) {
         return displayDate; // Invalid numbers, return for validation
@@ -65,13 +70,13 @@ const toIsoDate = (displayDate: string): string => {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 
-// Returns today's date in yyyy-mm-dd format, respecting the local timezone.
-const getTodayISO = () => {
+// Returns today's date in mm/dd/yy format for display purposes.
+const getTodayForDisplay = () => {
     const today = new Date();
-    const year = today.getFullYear();
+    const year = String(today.getFullYear()).slice(-2);
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${month}/${day}/${year}`;
 };
 
 const getInitialFormState = () => ({
@@ -80,8 +85,8 @@ const getInitialFormState = () => ({
     status: 'UP' as 'UP' | 'DOWN',
     reason: '',
     lastUpdate: '',
-    issueDate: getTodayISO(),
-    lastFollowUp: getTodayISO(),
+    issueDate: getTodayForDisplay(),
+    lastFollowUp: getTodayForDisplay(),
 });
 
 
@@ -105,9 +110,25 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // With input type="date", formData already has dates in yyyy-mm-dd format.
-        // No conversion or extra validation is needed.
-        const dataToSave = { ...formData };
+        const issueDateISO = toIsoDate(formData.issueDate.trim());
+        const lastFollowUpISO = toIsoDate(formData.lastFollowUp.trim());
+
+        // Check if parsing failed. If toIsoDate returns the original (and it's not already ISO), it's invalid.
+        if (formData.issueDate.trim() && issueDateISO === formData.issueDate.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(issueDateISO)) {
+            alert(`Invalid Issue Date: "${formData.issueDate}". Please use a valid mm/dd/yy format.`);
+            return;
+        }
+
+        if (formData.lastFollowUp.trim() && lastFollowUpISO === formData.lastFollowUp.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(lastFollowUpISO)) {
+            alert(`Invalid Last Follow Up Date: "${formData.lastFollowUp}". Please use a valid mm/dd/yy format.`);
+            return;
+        }
+        
+        const dataToSave = { 
+            ...formData,
+            issueDate: issueDateISO,
+            lastFollowUp: lastFollowUpISO
+        };
 
         if (editingReportId) {
             setReports(prev => prev.map(r => r.id === editingReportId ? { ...dataToSave, id: editingReportId } : r));
@@ -126,8 +147,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
             status: report.status,
             reason: report.reason,
             lastUpdate: report.lastUpdate,
-            issueDate: report.issueDate,
-            lastFollowUp: report.lastFollowUp,
+            issueDate: toDisplayDate(report.issueDate),
+            lastFollowUp: toDisplayDate(report.lastFollowUp),
         });
         formRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -238,7 +259,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         // Fallback 2: string dates (e.g., from CSV or formatted text)
                         if (typeof date === 'string') {
                             const isoDate = toIsoDate(date.trim());
-                            if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+                             // Check if conversion was successful
+                            if (isoDate !== date.trim() || /^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
                                 return isoDate;
                             }
                         }
@@ -360,11 +382,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
-                                <input type="date" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required placeholder="mm/dd/yy" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div>
                                 <label htmlFor="lastFollowUp" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Follow Up</label>
-                                <input type="date" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required placeholder="mm/dd/yy" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
 
                             <div className="lg:col-span-3 flex justify-end space-x-4">
