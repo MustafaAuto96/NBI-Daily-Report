@@ -204,7 +204,17 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                     const formatDate = (date: any): string => {
                         if (!date) return getTodayISO();
                         
-                        // Handle string dates first, as we set raw: false
+                        // Handle JS Date objects (which SheetJS might create despite options)
+                        if (date instanceof Date) {
+                            // Adjust for timezone offset to get the intended date as seen by the user,
+                            // not the UTC date which might be a day off.
+                            const tzOffsetMs = date.getTimezoneOffset() * 60000;
+                            const correctedDate = new Date(date.getTime() - tzOffsetMs);
+                            return correctedDate.toISOString().split('T')[0];
+                        }
+
+                        // Handle string dates (expected from raw: false).
+                        // Our toIsoDate function correctly parses dd/mm/yyyy.
                         if (typeof date === 'string') {
                             const isoDate = toIsoDate(date.trim());
                             if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
@@ -212,21 +222,12 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             }
                         }
 
-                        // Fallback for Excel serial numbers if they still appear
+                        // Fallback for Excel serial numbers.
                         if (typeof date === 'number') {
+                            // This formula converts Excel serial number to a JS Date object at UTC midnight.
                             const jsDate = new Date(Math.round((date - 25569) * 86400000));
-                            const year = jsDate.getUTCFullYear();
-                            const month = String(jsDate.getUTCMonth() + 1).padStart(2, '0');
-                            const day = String(jsDate.getUTCDate()).padStart(2, '0');
-                            return `${year}-${month}-${day}`;
-                        }
-                        
-                        // Safeguard for Date objects
-                        if (date instanceof Date) { 
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                            const day = String(date.getDate()).padStart(2, '0');
-                            return `${year}-${month}-${day}`;
+                             // toISOString gives UTC date, so splitting is safe.
+                            return jsDate.toISOString().split('T')[0];
                         }
 
                         console.warn(`Could not parse date from imported file, row ${index + 2}:`, date);
