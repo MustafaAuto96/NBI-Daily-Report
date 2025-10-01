@@ -16,7 +16,7 @@ interface DailyReportPageProps {
  * @returns The formatted date string, e.g., "6/12/2025".
  */
 const toDisplayDate = (isoDate: string): string => {
-    if (!isoDate) return isoDate;
+    if (!isoDate) return '';
     // Handles yyyy-mm-dd and yyyy-m-d
     const parts = isoDate.split('-');
     if (parts.length === 3 && parts[0].length === 4) { 
@@ -67,7 +67,15 @@ const toIsoDate = (displayDate: string): string => {
 
 
 const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }) => {
-    const getTodayISO = () => new Date().toISOString().split('T')[0];
+    // Returns today's date in yyyy-mm-dd format, respecting the local timezone.
+    const getTodayISO = () => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const importInputRef = useRef<HTMLInputElement>(null);
     const formRef = useRef<HTMLDivElement>(null);
 
@@ -77,8 +85,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
         status: 'UP' as 'UP' | 'DOWN',
         reason: '',
         lastUpdate: '',
-        issueDate: getTodayISO(),
-        lastFollowUp: getTodayISO(),
+        issueDate: toDisplayDate(getTodayISO()),
+        lastFollowUp: toDisplayDate(getTodayISO()),
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -97,13 +105,19 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // With input type="date", formData already contains ISO dates (yyyy-mm-dd).
-        const dataToSave = { ...formData };
+        const isoIssueDate = toIsoDate(formData.issueDate);
+        const isoLastFollowUp = toIsoDate(formData.lastFollowUp);
 
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.issueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.lastFollowUp)) {
-            alert('Please enter valid dates.');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(isoIssueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(isoLastFollowUp)) {
+            alert('Please enter valid dates in MM/DD/YYYY format.');
             return;
         }
+
+        const dataToSave = {
+            ...formData,
+            issueDate: isoIssueDate,
+            lastFollowUp: isoLastFollowUp,
+        };
 
         if (editingReportId) {
             setReports(prev => prev.map(r => r.id === editingReportId ? { ...dataToSave, id: editingReportId } : r));
@@ -116,15 +130,14 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     
     const handleEdit = (report: ProblemReport) => {
         setEditingReportId(report.id);
-        // The report object's dates are already in yyyy-mm-dd format, which is what input[type=date] expects.
         setFormData({
             siteName: report.siteName,
             ticketId: report.ticketId,
             status: report.status,
             reason: report.reason,
             lastUpdate: report.lastUpdate,
-            issueDate: report.issueDate,
-            lastFollowUp: report.lastFollowUp,
+            issueDate: toDisplayDate(report.issueDate),
+            lastFollowUp: toDisplayDate(report.lastFollowUp),
         });
         formRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -264,8 +277,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         status: status,
                         reason: String(row['Reason'] || ''),
                         lastUpdate: String(row['Last Update'] || ''),
-                        issueDate: String(row['Issue Date']),
-                        lastFollowUp: String(row['Last Follow Up']),
+                        issueDate: formatDate(row['Issue Date']),
+                        lastFollowUp: formatDate(row['Last Follow Up']),
                     };
                 }).filter((r): r is ProblemReport => r !== null && !!r.siteName && !!r.ticketId);
                 
@@ -357,11 +370,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
-                                <input type="date" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" placeholder="MM/DD/YYYY" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div>
                                 <label htmlFor="lastFollowUp" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Follow Up</label>
-                                <input type="date" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="text" placeholder="MM/DD/YYYY" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
 
                             <div className="lg:col-span-3 flex justify-end space-x-4">
