@@ -75,7 +75,7 @@ const getTodayISO = () => {
 };
 
 const getInitialFormState = () => ({
-    siteLocation: '',
+    siteName: '',
     ticketId: '',
     status: 'UP' as 'UP' | 'DOWN',
     reason: '',
@@ -121,7 +121,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     const handleEdit = (report: ProblemReport) => {
         setEditingReportId(report.id);
         setFormData({
-            siteLocation: report.siteLocation,
+            siteName: report.siteName,
             ticketId: report.ticketId,
             status: report.status,
             reason: report.reason,
@@ -156,10 +156,10 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     }
 
     const exportToCSV = () => {
-        const headers = ['Site Location', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
+        const headers = ['Site Name', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
         
         const rows = reports.map(report => 
-            [report.siteLocation, report.ticketId, report.status, `"${report.reason.replace(/"/g, '""')}"`, `"${report.lastUpdate.replace(/"/g, '""')}"`, toDisplayDate(report.issueDate), toDisplayDate(report.lastFollowUp)].join(',')
+            [report.siteName, report.ticketId, report.status, `"${report.reason.replace(/"/g, '""')}"`, `"${report.lastUpdate.replace(/"/g, '""')}"`, toDisplayDate(report.issueDate), toDisplayDate(report.lastFollowUp)].join(',')
         );
         
         const csvString = [headers.join(','), ...rows].join('\n');
@@ -200,7 +200,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                 }
                 
                 const headers = headerRows[0];
-                const expectedHeaders = ['Site Location', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
+                const expectedHeaders = ['Site Name', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
                 const lowerCaseHeaders = headers.map((h: any) => String(h).toLowerCase().trim());
                 const lowerCaseExpected = expectedHeaders.map(h => h.toLowerCase());
 
@@ -262,7 +262,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
 
                     return {
                         id: `imported-${Date.now()}-${index}`,
-                        siteLocation: String(row['Site Location'] || ''),
+                        siteName: String(row['Site Name'] || ''),
                         ticketId: String(row['Ticket ID'] || ''),
                         status: status,
                         reason: String(row['Reason'] || ''),
@@ -270,7 +270,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         issueDate: formatDate(row['Issue Date']),
                         lastFollowUp: formatDate(row['Last Follow Up']),
                     };
-                }).filter((r): r is ProblemReport => r !== null && !!r.siteLocation && !!r.ticketId);
+                }).filter((r): r is ProblemReport => r !== null && !!r.siteName && !!r.ticketId);
                 
                 if (newReports.length > 0) {
                     setImportedReports(newReports);
@@ -317,7 +317,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                 title="Delete Report"
                 message={
                      <>
-                        Are you sure you want to delete the report for site "<strong>{reportToDelete?.siteLocation}</strong>" with ticket ID "<strong>{reportToDelete?.ticketId}</strong>"?
+                        Are you sure you want to delete the report for site "<strong>{reportToDelete?.siteName}</strong>" with ticket ID "<strong>{reportToDelete?.ticketId}</strong>"?
                     </>
                 }
             />
@@ -336,8 +336,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">{editingReportId ? 'Edit Report' : 'Add New Problem Report'}</h1>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div className="lg:col-span-1">
-                                <label htmlFor="siteLocation" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Site Location</label>
-                                <input type="text" name="siteLocation" id="siteLocation" value={formData.siteLocation} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <label htmlFor="siteName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Site Name</label>
+                                <input type="text" name="siteName" id="siteName" value={formData.siteName} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div className="lg:col-span-1">
                                 <label htmlFor="ticketId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
@@ -394,7 +394,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    {[ 'Site Location', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up', 'Actions'].map(h => 
+                                    {[ 'Site Name', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up', 'Actions'].map(h => 
                                         <th key={h} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{h}</th>
                                     )}
                                 </tr>
@@ -402,7 +402,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {reports.map((report) => (
                                     <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{report.siteLocation}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{report.siteName}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{report.ticketId}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
