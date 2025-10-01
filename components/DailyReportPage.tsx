@@ -215,7 +215,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                     }
 
                     const formatDate = (date: any): string => {
-                        if (!date) return getTodayISO();
+                        if (!date) return '';
                         
                         // Priority 1: Handle JS Date objects from cellDates: true
                         if (date instanceof Date) {
@@ -227,7 +227,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             
                             if (isNaN(year) || isNaN(month) || isNaN(day)) {
                                 console.warn(`Invalid Date object on row ${index + 2}:`, date);
-                                return getTodayISO();
+                                return '';
                             }
                             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                         }
@@ -248,13 +248,13 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             const day = jsDate.getUTCDate();
                             if (isNaN(year) || isNaN(month) || isNaN(day)) {
                                 console.warn(`Invalid number for date on row ${index + 2}:`, date);
-                                return getTodayISO();
+                                return '';
                             }
                             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                         }
 
                         console.warn(`Could not parse date from imported file, row ${index + 2}:`, date);
-                        return getTodayISO();
+                        return '';
                     };
 
                     return {
