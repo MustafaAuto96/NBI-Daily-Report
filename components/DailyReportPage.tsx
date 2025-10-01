@@ -264,8 +264,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                         status: status,
                         reason: String(row['Reason'] || ''),
                         lastUpdate: String(row['Last Update'] || ''),
-                        issueDate: formatDate(row['Issue Date']),
-                        lastFollowUp: formatDate(row['Last Follow Up']),
+                        issueDate: String(row['Issue Date']),
+                        lastFollowUp: String(row['Last Follow Up']),
                     };
                 }).filter((r): r is ProblemReport => r !== null && !!r.siteName && !!r.ticketId);
                 
