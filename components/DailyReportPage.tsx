@@ -65,31 +65,31 @@ const toIsoDate = (displayDate: string): string => {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 
+// Returns today's date in yyyy-mm-dd format, respecting the local timezone.
+const getTodayISO = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getInitialFormState = () => ({
+    siteLocation: '',
+    ticketId: '',
+    status: 'UP' as 'UP' | 'DOWN',
+    reason: '',
+    lastUpdate: '',
+    issueDate: getTodayISO(),
+    lastFollowUp: getTodayISO(),
+});
+
 
 const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }) => {
-    // Returns today's date in yyyy-mm-dd format, respecting the local timezone.
-    const getTodayISO = () => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
     const importInputRef = useRef<HTMLInputElement>(null);
     const formRef = useRef<HTMLDivElement>(null);
 
-    const initialFormState = {
-        siteLocation: '',
-        ticketId: '',
-        status: 'UP' as 'UP' | 'DOWN',
-        reason: '',
-        lastUpdate: '',
-        issueDate: getTodayISO(),
-        lastFollowUp: getTodayISO(),
-    };
-
-    const [formData, setFormData] = useState(initialFormState);
+    const [formData, setFormData] = useState(getInitialFormState);
     const [editingReportId, setEditingReportId] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [reportToDelete, setReportToDelete] = useState<ProblemReport | null>(null);
@@ -115,7 +115,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
         } else {
             setReports(prev => [...prev, { ...dataToSave, id: Date.now().toString() }]);
         }
-        setFormData(initialFormState);
+        setFormData(getInitialFormState());
     };
     
     const handleEdit = (report: ProblemReport) => {
@@ -152,7 +152,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     
     const handleCancelEdit = () => {
         setEditingReportId(null);
-        setFormData(initialFormState);
+        setFormData(getInitialFormState());
     }
 
     const exportToCSV = () => {
