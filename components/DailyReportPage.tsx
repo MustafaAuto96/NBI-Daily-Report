@@ -28,6 +28,7 @@ const toDisplayDate = (isoDate: string): string => {
 
 /**
  * Converts a display date string (m/d/yyyy) to an ISO date string (yyyy-mm-dd).
+ * Used as a fallback for parsing string dates during import.
  * @param displayDate The date string in m/d/yyyy or mm/dd/yyyy format.
  * @returns The formatted date string in yyyy-mm-dd format.
  */
@@ -76,8 +77,8 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
         status: 'UP' as 'UP' | 'DOWN',
         reason: '',
         lastUpdate: '',
-        issueDate: toDisplayDate(getTodayISO()),
-        lastFollowUp: toDisplayDate(getTodayISO()),
+        issueDate: getTodayISO(),
+        lastFollowUp: getTodayISO(),
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -96,14 +97,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        const dataToSave = {
-            ...formData,
-            issueDate: toIsoDate(formData.issueDate),
-            lastFollowUp: toIsoDate(formData.lastFollowUp),
-        };
+        // With input type="date", formData already contains ISO dates (yyyy-mm-dd).
+        const dataToSave = { ...formData };
 
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.issueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(dataToSave.lastFollowUp)) {
-            alert('Please enter valid dates in mm/dd/yyyy format.');
+            alert('Please enter valid dates.');
             return;
         }
 
@@ -118,10 +116,15 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
     
     const handleEdit = (report: ProblemReport) => {
         setEditingReportId(report.id);
+        // The report object's dates are already in yyyy-mm-dd format, which is what input[type=date] expects.
         setFormData({
-            ...report,
-            issueDate: toDisplayDate(report.issueDate),
-            lastFollowUp: toDisplayDate(report.lastFollowUp),
+            siteName: report.siteName,
+            ticketId: report.ticketId,
+            status: report.status,
+            reason: report.reason,
+            lastUpdate: report.lastUpdate,
+            issueDate: report.issueDate,
+            lastFollowUp: report.lastFollowUp,
         });
         formRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -183,7 +186,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
         reader.onload = (event) => {
             try {
                 const data = event.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary', cellDates: false });
+                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const headerRows: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -195,7 +198,7 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                 
                 const headers = headerRows[0];
                 const expectedHeaders = ['Site Name', 'Ticket ID', 'Status', 'Reason', 'Last Update', 'Issue Date', 'Last Follow Up'];
-                const lowerCaseHeaders = headers.map((h: any) => String(h).toLowerCase());
+                const lowerCaseHeaders = headers.map((h: any) => String(h).toLowerCase().trim());
                 const lowerCaseExpected = expectedHeaders.map(h => h.toLowerCase());
 
                 if (lowerCaseHeaders.length < lowerCaseExpected.length || !lowerCaseExpected.every(h => lowerCaseHeaders.includes(h))) {
@@ -214,17 +217,22 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                     const formatDate = (date: any): string => {
                         if (!date) return getTodayISO();
                         
-                        // Handle JS Date objects (which SheetJS might create despite options)
+                        // Priority 1: Handle JS Date objects from cellDates: true
                         if (date instanceof Date) {
-                            // Adjust for timezone offset to get the intended date as seen by the user,
-                            // not the UTC date which might be a day off.
-                            const tzOffsetMs = date.getTimezoneOffset() * 60000;
-                            const correctedDate = new Date(date.getTime() - tzOffsetMs);
-                            return correctedDate.toISOString().split('T')[0];
+                            // Extract UTC components to avoid timezone issues.
+                            // SheetJS parses Excel dates into JS Dates at UTC midnight.
+                            const year = date.getUTCFullYear();
+                            const month = date.getUTCMonth() + 1; // getMonth is 0-indexed
+                            const day = date.getUTCDate();
+                            
+                            if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                                console.warn(`Invalid Date object on row ${index + 2}:`, date);
+                                return getTodayISO();
+                            }
+                            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                         }
 
-                        // Handle string dates (expected from raw: false).
-                        // Our toIsoDate function correctly parses mm/dd/yyyy.
+                        // Fallback 2: string dates (e.g., from CSV or formatted text)
                         if (typeof date === 'string') {
                             const isoDate = toIsoDate(date.trim());
                             if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
@@ -232,12 +240,17 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             }
                         }
 
-                        // Fallback for Excel serial numbers.
-                        if (typeof date === 'number') {
-                            // This formula converts Excel serial number to a JS Date object at UTC midnight.
+                        // Fallback 3: Excel serial numbers (if cellDates:true fails)
+                        if (typeof date === 'number' && date > 0) {
                             const jsDate = new Date(Math.round((date - 25569) * 86400000));
-                             // toISOString gives UTC date, so splitting is safe.
-                            return jsDate.toISOString().split('T')[0];
+                            const year = jsDate.getUTCFullYear();
+                            const month = jsDate.getUTCMonth() + 1;
+                            const day = jsDate.getUTCDate();
+                            if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                                console.warn(`Invalid number for date on row ${index + 2}:`, date);
+                                return getTodayISO();
+                            }
+                            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                         }
 
                         console.warn(`Could not parse date from imported file, row ${index + 2}:`, date);
@@ -344,11 +357,11 @@ const DailyReportPage: React.FC<DailyReportPageProps> = ({ reports, setReports }
                             </div>
                             <div>
                                 <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Date</label>
-                                <input type="text" placeholder="mm/dd/yyyy" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="date" name="issueDate" id="issueDate" value={formData.issueDate} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
                             <div>
                                 <label htmlFor="lastFollowUp" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Follow Up</label>
-                                <input type="text" placeholder="mm/dd/yyyy" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
+                                <input type="date" name="lastFollowUp" id="lastFollowUp" value={formData.lastFollowUp} onChange={handleChange} required className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700"/>
                             </div>
 
                             <div className="lg:col-span-3 flex justify-end space-x-4">
